@@ -67,6 +67,14 @@ export class CalculatorController {
           this.calculator.calculatePercent();
           break;
 
+        case "open-parenthesis":
+          this.calculator.openParenthesis();
+          break;
+
+        case "close-parenthesis":
+          this.calculator.closeParenthesis();
+          break;
+
         case "calculate":
           this.calculator.compute();
           break;
@@ -79,39 +87,22 @@ export class CalculatorController {
 
   // 3. Cập nhật màn hình hiển thị
   updateDisplay() {
-    // Nếu đang nhập phép tính
-    if (this.calculator.operation !== null) {
-      const operationSymbols = {
-        "+": "+",
-        "-": "−",
-        "*": "×",
-        "/": "÷",
-      };
-
-      // Hiển thị toàn bộ biểu thức phía trên
-      this.previousOperandElement.textContent = `${this.calculator.previousOperand} ${
-        operationSymbols[this.calculator.operation]
-      } ${
-        this.calculator.shouldResetScreen ? "" : this.calculator.currentOperand
-      }`;
-
-      // Chưa hiển thị kết quả
-      this.currentOperandElement.textContent = "";
-    }
-
-    // Nếu vừa thực hiện phép tính
-    else if (this.calculator.lastExpression !== "") {
+    // Vừa nhấn "=" hoặc bị lỗi: biểu thức ở trên, kết quả ở dưới
+    if (this.calculator.isFinished || this.calculator.hasError) {
       this.previousOperandElement.textContent = this.calculator.lastExpression;
-
-      // Hiển thị kết quả phía dưới
-      this.currentOperandElement.textContent = this.calculator.currentOperand;
+      this.currentOperandElement.textContent = this.calculator.result;
+      return;
     }
 
-    // Khi mới nhập số, chưa có phép toán
-    else {
-      this.previousOperandElement.textContent = this.calculator.currentOperand;
+    // Đang nhập: hiển thị biểu thức ở trên, chưa có kết quả
+    const expression = this.calculator.getExpressionText();
 
-      this.currentOperandElement.textContent = "";
+    if (expression === "") {
+      this.previousOperandElement.textContent = "0";
+    } else {
+      this.previousOperandElement.textContent = expression;
     }
+
+    this.currentOperandElement.textContent = "";
   }
 }

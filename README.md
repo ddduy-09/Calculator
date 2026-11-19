@@ -4,11 +4,12 @@ Máy tính bỏ túi chạy trên trình duyệt, viết bằng HTML, CSS và Ja
 
 ## Tính năng
 
-- Phép toán: cộng (`+`), trừ (`−`), nhân (`×`), chia (`÷`)
+- Phép toán: cộng (`+`), trừ (`−`), nhân (`×`), chia (`÷`) với thứ tự ưu tiên đúng: ngoặc, nhân/chia, cộng/trừ
+- Dấu ngoặc `(` và `)`, lồng nhau được
 - Số thập phân (`.`), đổi dấu (`±`), phần trăm (`%`)
 - `AC`: xóa toàn bộ
-- `⌫`: xóa lần lượt từng thành phần của biểu thức (số thứ hai → phép toán → số thứ nhất)
-- Tính liên tiếp: `5 + 3 + 2` tự tính `5 + 3` khi chọn phép toán tiếp theo
+- `⌫`: xóa lần lượt từng thành phần của biểu thức
+- Nhấn `=` tự đóng các dấu `(` còn thiếu: `(5 + 3` → `(5 + 3)` = `8`
 - Báo `Error` khi chia cho 0 hoặc kết quả không hợp lệ
 - Giới hạn 15 ký tự mỗi số
 - Giảm sai số số thực bằng `toPrecision(12)` (ví dụ `0.1 + 0.2 = 0.3`)
@@ -17,10 +18,10 @@ Máy tính bỏ túi chạy trên trình duyệt, viết bằng HTML, CSS và Ja
 
 | Vùng | Phần tử | Nội dung |
 |---|---|---|
-| Trên | `#previous-operand` | Biểu thức đang nhập, ví dụ `5 + 3` |
+| Trên | `#previous-operand` | Biểu thức đang nhập, ví dụ `(5 + 3) × 2` |
 | Dưới | `#current-operand` | Kết quả sau khi nhấn `=` |
 
-Sau khi nhấn `=`, vùng trên giữ lại biểu thức vừa tính (`5 + 3`), vùng dưới hiện kết quả (`8`).
+Sau khi nhấn `=`, vùng trên giữ lại biểu thức vừa tính, vùng dưới hiện kết quả.
 
 ## Cấu trúc thư mục
 
@@ -39,7 +40,7 @@ calculator/
 |---|---|
 | `index.html` | Giao diện: màn hình và bàn phím, mỗi nút gắn `data-number`, `data-operator` hoặc `data-action` |
 | `css/style.css` | Bố cục (Flexbox, CSS Grid) và màu sắc |
-| `js/calculator.js` | Lớp `Calculator`: toàn bộ logic tính toán, không thao tác DOM |
+| `js/calculator.js` | Lớp `Calculator`: lưu biểu thức, tính toán, không thao tác DOM |
 | `js/controller.js` | Lớp `CalculatorController`: nhận sự kiện nhấn nút, gọi `Calculator`, cập nhật màn hình |
 | `js/main.js` | Điểm khởi chạy: tạo `Calculator` và `CalculatorController` |
 
@@ -55,11 +56,32 @@ Nhấn nút → CalculatorController.handleButtonClick()
 
 | Thuộc tính | Ý nghĩa |
 |---|---|
-| `currentOperand` | Số đang nhập (chuỗi) |
-| `previousOperand` | Số nhập trước đó |
-| `operation` | Phép toán đang chọn, `null` nếu chưa có |
-| `shouldResetScreen` | `true` khi lần nhập số kế tiếp phải bắt đầu số mới |
-| `lastExpression` | Biểu thức vừa tính xong, hiển thị sau khi nhấn `=` |
+| `tokens` | Các thành phần đã chốt của biểu thức, ví dụ `["(", "5", "+", "3", ")"]` |
+| `currentOperand` | Số đang nhập (chuỗi), rỗng nếu chưa nhập |
+| `lastExpression` | Biểu thức vừa tính xong |
+| `result` | Kết quả vừa tính |
+| `isFinished` | `true` khi vừa nhấn `=` |
+| `hasError` | `true` khi phép tính lỗi |
+
+## Quy tắc dấu ngoặc
+
+| Thao tác | Điều kiện được nhập |
+|---|---|
+| `(` | Ở đầu biểu thức, sau phép toán hoặc sau `(` |
+| `)` | Có `(` đang chờ đóng, và đứng sau một số hoặc sau `)` |
+| Số, `.` | Không nhập được ngay sau `)` |
+| Phép toán | Không nhập được ngay sau `(` |
+
+## Bảng xử lý nút xóa `⌫`
+
+| Trạng thái | Khi nhấn `⌫` |
+|---|---|
+| Đang hiện kết quả hoặc `Error` | Xóa tất cả về `0` |
+| Đang nhập số (`5 + 3`) | Xóa ký tự cuối của số |
+| Số đã bị xóa hết (`5 +`) | Xóa phép toán |
+| Cuối biểu thức là `(` hoặc `)` | Xóa dấu ngoặc đó |
+
+Ví dụ `(5 + 3)`: `(5 + 3)` → `(5 + 3` → `(5 +` → `(5` → `(` → `0`.
 
 ## Chạy dự án
 
@@ -77,13 +99,3 @@ npx serve .
 ```
 
 Sau đó mở địa chỉ hiển thị trong terminal (thường là `http://localhost:3000`).
-
-## Bảng xử lý nút xóa `⌫`
-
-| Trạng thái | Khi nhấn `⌫` |
-|---|---|
-| Đang hiện kết quả (`5 + 3` / `8`) | Xóa tất cả về `0` |
-| Vừa chọn phép toán (`5 +`) | Xóa phép toán, quay về `5` |
-| Đang nhập số thứ hai (`5 + 3`) | Xóa ký tự cuối; hết số thì về `5 +` |
-| Đang nhập số thứ nhất (`53`) | Xóa ký tự cuối; hết số thì về `0` |
-| `Error` | Đặt lại toàn bộ |

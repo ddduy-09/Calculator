@@ -1,47 +1,139 @@
+// Bảng đổi ký hiệu phép toán sang ký hiệu hiển thị
+const OPERATION_SYMBOLS = {
+  "+": "+",
+  "-": "−",
+  "*": "×",
+  "/": "÷",
+};
+
 export class Calculator {
   constructor() {
-    // Số đang được nhập
-    this.currentOperand = "0";
+    // Các thành phần đã chốt của biểu thức, ví dụ: ["(", "5", "+", "3", ")", "*"]
+    this.tokens = [];
 
-    // Số được nhập trước đó
-    this.previousOperand = "";
+    // Số đang được nhập (chuỗi). Rỗng nghĩa là chưa nhập số nào
+    this.currentOperand = "";
 
-    // Phép toán đang được lựa chọn
-    this.operation = null;
-
-    // Kiểm tra có cần bắt đầu nhập số mới không
-    this.shouldResetScreen = false;
-
+    // Biểu thức vừa tính xong, hiển thị phía trên sau khi nhấn "="
     this.lastExpression = "";
+
+    // Kết quả của phép tính vừa thực hiện
+    this.result = "";
+
+    // true khi vừa nhấn "=" và đang hiển thị kết quả
+    this.isFinished = false;
+
+    // true khi phép tính bị lỗi (ví dụ chia cho 0)
+    this.hasError = false;
+
+    // Dùng khi phân tích biểu thức
+    this.parseTokens = [];
+    this.parsePosition = 0;
   }
+
+  // ===== Hàm hỗ trợ =====
+
+  // Kiểm tra token có phải phép toán không
+  isOperator(token) {
+    return token === "+" || token === "-" || token === "*" || token === "/";
+  }
+
+  // Kiểm tra token có phải số không
+  isNumber(token) {
+    if (token === undefined) {
+      return false;
+    }
+
+    return !this.isOperator(token) && token !== "(" && token !== ")";
+  }
+
+  // Lấy token cuối cùng đã chốt
+  getLastToken() {
+    return this.tokens[this.tokens.length - 1];
+  }
+
+  // Đếm số dấu "(" chưa được đóng
+  countOpenParentheses(items) {
+    let count = 0;
+
+    for (let index = 0; index < items.length; index += 1) {
+      if (items[index] === "(") {
+        count += 1;
+      } else if (items[index] === ")") {
+        count -= 1;
+      }
+    }
+
+    return count;
+  }
+
+  // Lấy toàn bộ biểu thức: token đã chốt + số đang nhập
+  getAllTokens() {
+    const items = this.tokens.slice();
+
+    if (this.currentOperand !== "") {
+      items.push(this.currentOperand);
+    }
+
+    return items;
+  }
+
+  // Chuyển danh sách token thành chuỗi hiển thị, ví dụ "(5 + 3) × 2"
+  formatTokens(items) {
+    let text = "";
+
+    for (let index = 0; index < items.length; index += 1) {
+      if (this.isOperator(items[index])) {
+        text += " " + OPERATION_SYMBOLS[items[index]] + " ";
+      } else {
+        text += items[index];
+      }
+    }
+
+    return text.trim();
+  }
+
+  // Biểu thức đang nhập, hiển thị ở previous-operand
+  getExpressionText() {
+    return this.formatTokens(this.getAllTokens());
+  }
+
+  // Nếu vừa có kết quả hoặc lỗi thì bắt đầu biểu thức mới
+  prepareNewInput() {
+    if (this.hasError || this.isFinished) {
+      this.clear();
+    }
+  }
+
+  // Dùng kết quả vừa tính làm số đầu tiên của biểu thức mới
+  startFromResult() {
+    this.currentOperand = this.result;
+    this.tokens = [];
+    this.result = "";
+    this.lastExpression = "";
+    this.isFinished = false;
+  }
+
+  // ===== Chức năng chính =====
 
   // 1. Nhập số
   appendNumber(number) {
-    if (this.currentOperand === "Error") {
-      this.currentOperand = "0";
-    }
+    this.prepareNewInput();
 
-    if (this.shouldResetScreen) {
-      // Nếu không còn phép toán đang chờ thì bắt đầu phép tính mới
-      if (this.operation === null) {
-        this.lastExpression = "";
-      }
-      this.currentOperand = number;
-      this.shouldResetScreen = false;
-      return;
-    }
-
-    if (this.shouldResetScreen) {
-      this.currentOperand = number;
-      this.shouldResetScreen = false;
-      return;
-    }
-
-    if (number === "0" && this.currentOperand === "0") {
+    // Không cho nhập số ngay sau ")" hoặc sau số đã chốt (ví dụ sau "%")
+    const lastToken = this.getLastToken();
+    if (
+      this.currentOperand === "" &&
+      (lastToken === ")" || this.isNumber(lastToken))
+    ) {
       return;
     }
 
     if (this.currentOperand === "0") {
+      if (number === "0") {
+        return;
+      }
+
       this.currentOperand = number;
       return;
     }
@@ -55,22 +147,17 @@ export class Calculator {
 
   // 2. Nhập số thập phân
   appendDecimal() {
-    if (this.currentOperand === "Error") {
-      this.currentOperand = "0";
-    }
+    this.prepareNewInput();
 
-    if (this.shouldResetScreen) {
-      // Nếu không còn phép toán đang chờ thì bắt đầu phép tính mới
-      if (this.operation === null) {
-        this.lastExpression = "";
+    if (this.currentOperand === "") {
+      const lastToken = this.getLastToken();
+
+      if (lastToken === ")" || this.isNumber(lastToken)) {
+        return;
       }
-      this.currentOperand = "0";
-      this.shouldResetScreen = false;
-    }
 
-    if (this.shouldResetScreen) {
-      this.currentOperand = "0";
-      this.shouldResetScreen = false;
+      this.currentOperand = "0.";
+      return;
     }
 
     if (this.currentOperand.includes(".")) {
@@ -84,14 +171,18 @@ export class Calculator {
     this.currentOperand += ".";
   }
 
-  // 3. Đổi dấu âm/dương
+  // 3. Đổi dấu âm/dương của số đang nhập
   toggleSign() {
-    if (this.currentOperand === "Error" || this.currentOperand === "0") {
+    if (this.hasError) {
       return;
     }
 
-    if (this.shouldResetScreen) {
-      this.shouldResetScreen = false;
+    if (this.isFinished) {
+      this.startFromResult();
+    }
+
+    if (this.currentOperand === "" || this.currentOperand === "0") {
+      return;
     }
 
     if (this.currentOperand.startsWith("-")) {
@@ -103,148 +194,286 @@ export class Calculator {
 
   // 4. Xóa ký tự cuối cùng
   deleteNumber() {
-    // Trường hợp lỗi: đặt lại toàn bộ
-    if (this.currentOperand === "Error") {
+    // Đang hiện lỗi hoặc kết quả: xóa tất cả
+    if (this.hasError || this.isFinished) {
       this.clear();
       return;
     }
 
-    // Trường hợp đang hiện kết quả của phép tính: xóa tất cả
-    if (this.operation === null && this.lastExpression !== "") {
-      this.clear();
+    // Số đã chốt (ví dụ sau "%") quay lại thành số đang nhập để xóa từng ký tự
+    if (this.currentOperand === "" && this.isNumber(this.getLastToken())) {
+      this.currentOperand = this.tokens.pop();
+    }
+
+    // Đang nhập số: xóa ký tự cuối
+    if (this.currentOperand !== "") {
+      this.currentOperand = this.currentOperand.slice(0, -1);
+
+      if (this.currentOperand === "-") {
+        this.currentOperand = "";
+      }
+
       return;
     }
 
-    // Trường hợp vừa chọn phép toán (ví dụ "5 +"): xóa phép toán,
-    // quay lại trạng thái đang nhập số thứ nhất
-    if (this.operation !== null && this.shouldResetScreen) {
-      this.currentOperand = this.previousOperand;
-      this.previousOperand = "";
-      this.operation = null;
-      this.shouldResetScreen = false;
-      return;
-    }
+    // Không có số đang nhập: xóa token cuối ("+", "(", ")", ...)
+    if (this.tokens.length > 0) {
+      this.tokens.pop();
 
-    // Trường hợp còn lại: xóa ký tự cuối của số đang nhập
-    this.shouldResetScreen = false;
-    this.currentOperand = this.currentOperand.slice(0, -1);
-
-    // Số đang nhập đã bị xóa hết
-    if (this.currentOperand === "" || this.currentOperand === "-") {
-      if (this.operation !== null) {
-        // Quay về trạng thái "5 +" (đã có phép toán, chưa có số thứ hai)
-        this.currentOperand = this.previousOperand;
-        this.shouldResetScreen = true;
-      } else {
-        this.currentOperand = "0";
+      // Nếu token phía trước là số thì đưa lại thành số đang nhập để sửa tiếp
+      if (this.isNumber(this.getLastToken())) {
+        this.currentOperand = this.tokens.pop();
       }
     }
   }
 
-  // 5. Xóa toàn bộ phép tính
+  // 5. Xóa toàn bộ
   clear() {
-    this.currentOperand = "0";
-    this.previousOperand = "";
-    this.operation = null;
-    this.shouldResetScreen = false;
+    this.tokens = [];
+    this.currentOperand = "";
     this.lastExpression = "";
+    this.result = "";
+    this.isFinished = false;
+    this.hasError = false;
   }
 
   // 6. Chọn phép toán
   chooseOperation(operation) {
-    if (this.currentOperand === "Error") {
+    if (this.hasError) {
       return;
     }
 
-    // Nếu đã có phép toán trước đó thì tính trước
-    if (this.operation !== null && !this.shouldResetScreen) {
-      this.compute();
+    // Có kết quả: tiếp tục tính từ kết quả đó
+    if (this.isFinished) {
+      this.startFromResult();
     }
-    this.lastExpression = "";
-    this.previousOperand = this.currentOperand;
-    this.operation = operation;
-    this.shouldResetScreen = true;
+
+    // Đang nhập số: chốt số rồi thêm phép toán
+    if (this.currentOperand !== "") {
+      this.tokens.push(this.currentOperand);
+      this.currentOperand = "";
+      this.tokens.push(operation);
+      return;
+    }
+
+    const lastToken = this.getLastToken();
+
+    // Chưa nhập gì: coi như bắt đầu từ số 0
+    if (lastToken === undefined) {
+      this.tokens.push("0");
+      this.tokens.push(operation);
+      return;
+    }
+
+    // Ngay sau "(" chưa có số nên không thêm phép toán
+    if (lastToken === "(") {
+      return;
+    }
+
+    // Đang có phép toán ở cuối: thay bằng phép toán mới
+    if (this.isOperator(lastToken)) {
+      this.tokens[this.tokens.length - 1] = operation;
+      return;
+    }
+
+    // Sau ")" hoặc số đã chốt: thêm phép toán
+    this.tokens.push(operation);
   }
 
-  // 7. Thực hiện phép tính
-  compute() {
-    if (
-      this.operation === null ||
-      this.previousOperand === "" ||
-      this.currentOperand === "Error"
-    ) {
+  // 7. Mở ngoặc
+  openParenthesis() {
+    this.prepareNewInput();
+
+    // Không cho mở ngoặc ngay sau một số
+    if (this.currentOperand !== "") {
       return;
     }
 
-    const previous = parseFloat(this.previousOperand);
-    const current = parseFloat(this.currentOperand);
-    // Lưu lại toàn bộ biểu thức trước khi tính
-    const operationSymbols = {
-      "+": "+",
-      "-": "−",
-      "*": "×",
-      "/": "÷",
-    };
+    const lastToken = this.getLastToken();
 
-    this.lastExpression = `${this.previousOperand} ${
-      operationSymbols[this.operation]
-    } ${this.currentOperand}`;
+    // Chỉ mở ngoặc ở đầu biểu thức, sau phép toán hoặc sau "("
+    if (
+      lastToken === undefined ||
+      this.isOperator(lastToken) ||
+      lastToken === "("
+    ) {
+      this.tokens.push("(");
+    }
+  }
 
-    let result;
+  // 8. Đóng ngoặc
+  closeParenthesis() {
+    if (this.hasError || this.isFinished) {
+      return;
+    }
 
-    switch (this.operation) {
-      case "+":
-        result = previous + current;
+    // Không có "(" nào đang chờ đóng
+    if (this.countOpenParentheses(this.tokens) === 0) {
+      return;
+    }
+
+    if (this.currentOperand !== "") {
+      // Chốt số đang nhập trước khi đóng ngoặc
+      this.tokens.push(this.currentOperand);
+      this.currentOperand = "";
+    } else {
+      // Chỉ đóng ngoặc sau một số hoặc sau ")"
+      const lastToken = this.getLastToken();
+
+      if (lastToken !== ")" && !this.isNumber(lastToken)) {
+        return;
+      }
+    }
+
+    this.tokens.push(")");
+  }
+
+  // 9. Thực hiện phép tính
+  compute() {
+    if (this.hasError || this.isFinished) {
+      return;
+    }
+
+    const items = this.getAllTokens();
+
+    // Bỏ phép toán hoặc "(" thừa ở cuối, ví dụ "5 +" thành "5"
+    while (items.length > 0) {
+      const lastItem = items[items.length - 1];
+
+      if (this.isOperator(lastItem) || lastItem === "(") {
+        items.pop();
+      } else {
         break;
+      }
+    }
 
-      case "-":
-        result = previous - current;
-        break;
+    // Biểu thức rỗng hoặc chỉ có một số: không cần tính
+    if (items.length <= 1) {
+      return;
+    }
 
-      case "*":
-        result = previous * current;
-        break;
+    // Tự động đóng các dấu "(" còn thiếu
+    const missingCount = this.countOpenParentheses(items);
+    for (let index = 0; index < missingCount; index += 1) {
+      items.push(")");
+    }
 
-      case "/":
-        if (current === 0) {
-          this.currentOperand = "Error";
-          this.previousOperand = "";
-          this.operation = null;
-          this.shouldResetScreen = true;
-          return;
+    this.lastExpression = this.formatTokens(items);
+    this.tokens = [];
+    this.currentOperand = "";
+    this.isFinished = true;
+
+    try {
+      const value = this.evaluate(items);
+
+      if (!Number.isFinite(value)) {
+        throw new Error("Kết quả không hợp lệ");
+      }
+
+      // Giảm sai số tính toán số thập phân
+      this.result = parseFloat(value.toPrecision(12)).toString();
+    } catch (error) {
+      this.hasError = true;
+      this.result = "Error";
+    }
+  }
+
+  // 10. Tính phần trăm số đang nhập
+  calculatePercent() {
+    if (this.hasError) {
+      return;
+    }
+
+    if (this.isFinished) {
+      this.startFromResult();
+    }
+
+    if (this.currentOperand === "") {
+      return;
+    }
+
+    const value = parseFloat(this.currentOperand) / 100;
+
+    // Chốt luôn số vừa tính, người dùng phải chọn phép toán tiếp theo
+    this.tokens.push(parseFloat(value.toPrecision(12)).toString());
+    this.currentOperand = "";
+  }
+
+  // ===== Tính giá trị biểu thức =====
+  // Thứ tự ưu tiên: ngoặc, nhân/chia, cộng/trừ.
+  // Dùng phương pháp phân tích đệ quy, không dùng eval()
+
+  evaluate(items) {
+    this.parseTokens = items;
+    this.parsePosition = 0;
+
+    return this.parseExpression();
+  }
+
+  // Biểu thức = hạng tử, nối với nhau bằng "+" hoặc "-"
+  parseExpression() {
+    let value = this.parseTerm();
+
+    while (
+      this.parseTokens[this.parsePosition] === "+" ||
+      this.parseTokens[this.parsePosition] === "-"
+    ) {
+      const operator = this.parseTokens[this.parsePosition];
+      this.parsePosition += 1;
+
+      const right = this.parseTerm();
+
+      if (operator === "+") {
+        value = value + right;
+      } else {
+        value = value - right;
+      }
+    }
+
+    return value;
+  }
+
+  // Hạng tử = thừa số, nối với nhau bằng "*" hoặc "/"
+  parseTerm() {
+    let value = this.parseFactor();
+
+    while (
+      this.parseTokens[this.parsePosition] === "*" ||
+      this.parseTokens[this.parsePosition] === "/"
+    ) {
+      const operator = this.parseTokens[this.parsePosition];
+      this.parsePosition += 1;
+
+      const right = this.parseFactor();
+
+      if (operator === "*") {
+        value = value * right;
+      } else {
+        if (right === 0) {
+          throw new Error("Chia cho 0");
         }
 
-        result = previous / current;
-        break;
-
-      default:
-        return;
+        value = value / right;
+      }
     }
 
-    // Kiểm tra kết quả hợp lệ
-    if (!Number.isFinite(result)) {
-      this.currentOperand = "Error";
-    } else {
-      // Giảm sai số tính toán số thập phân
-      result = parseFloat(result.toPrecision(12));
-      this.currentOperand = result.toString();
-    }
-
-    // Xóa trạng thái phép tính cũ
-    this.previousOperand = "";
-    this.operation = null;
-    this.shouldResetScreen = true;
+    return value;
   }
 
-  // 8. Tính phần trăm
-  calculatePercent() {
-    if (this.currentOperand === "Error") {
-      return;
+  // Thừa số = một số, hoặc một biểu thức nằm trong ngoặc
+  parseFactor() {
+    const token = this.parseTokens[this.parsePosition];
+    this.parsePosition += 1;
+
+    if (token === "(") {
+      const value = this.parseExpression();
+
+      // Bỏ qua dấu ")"
+      this.parsePosition += 1;
+
+      return value;
     }
 
-    const number = parseFloat(this.currentOperand);
-
-    this.currentOperand = (number / 100).toString();
-    this.shouldResetScreen = true;
+    return parseFloat(token);
   }
 }

@@ -106,3 +106,16 @@ button.equal {
 button.equal:hover {
   background: #f5ad50;
 }
+
+button.wide {
+  grid-column: span 2;
+}
+
+.previous-operand {
+  color: #9ca3af;
+  font-size: 16px;
+  min-height: 24px;
+  max-width: 100%;
+  text-align: right;
+  overflow-wrap: anywhere; /* cho phép ngắt dòng ở bất kỳ ký tự nào khi biểu thức quá dài */
+}
