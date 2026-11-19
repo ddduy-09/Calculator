@@ -1,0 +1,108 @@
+/* 1. Thiết lập chung */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #171923;
+  font-family: Arial, sans-serif;
+}
+
+/* 2. Khung máy tính */
+.calculator {
+  width: 340px;
+  padding: 20px;
+  background: #202534;
+  border-radius: 24px; /*bo tròn các góc*/
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 3. Màn hình hiển thị */
+.display {
+  height: 110px;
+  padding: 15px;
+  margin-bottom: 20px;
+  background: #292f3d;
+  border-radius: 14px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.previous-operand {
+  color: #9ca3af;
+  font-size: 16px;
+  min-height: 24px;
+}
+
+.current-operand {
+  color: white;
+  font-size: 36px;
+  font-weight: bold;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* 4. Bố cục bàn phím */
+.buttons {
+  display: grid; /*Tạo bố cục dạng lưới cho phép sắp xếp các nút theo hàng và cột mà không cần tự căn chỉnh từng nút*/
+  grid-template-columns: repeat(
+    4,
+    1fr
+  ); /*xác định cấu trúc và kích thước các cột trong Grid. Tạo 4 cột với tỉ lệ là 1:1:1:1. fr là tỉ lệ giữa các cột*/
+  gap: 10px; /*tạo khoảng cách giữa các Grid Item*/
+}
+
+/* 5. Thiết kế các nút */
+button {
+  height: 60px;
+  border: none;
+  border-radius: 12px;
+  background: #292f3d;
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+/* Hiệu ứng khi di chuột */
+button:hover {
+  background: #41485b;
+}
+
+/* Hiệu ứng khi nhấn */
+button:active {
+  transform: scale(0.94);
+}
+
+/* 6. Nút chức năng */
+button.function {
+  background: #41485b;
+  color: #e5e7eb;
+}
+
+/* 7. Nút phép toán */
+button.operator {
+  background: #41485b;
+  color: #f0a13a;
+}
+
+/* 8. Nút bằng */
+button.equal {
+  background: #e99a38;
+  color: white;
+}
+
+button.equal:hover {
+  background: #f5ad50;
+}
